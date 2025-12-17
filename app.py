@@ -1,223 +1,272 @@
 
-
-
-
-
-from flask import Flask, render_template, request, redirect, session, flash
+from flask import Flask, render_template, request, redirect, session, flash, jsonify
 from supabase import create_client
-from werkzeug.security import check_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
+import os
 
 # ---------------- APP SETUP ----------------
 app = Flask(__name__)
-app.secret_key = "hackathon_secret_key"
+app.secret_key = "hackathon_secret_key"   # REQUIRED for session & flash
 
 SUPABASE_URL = "https://ofyhamnfkpgtnujmqgiv.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meWhhbW5ma3BndG51am1xZ2l2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTM4MzIyMiwiZXhwIjoyMDgwOTU5MjIyfQ.YLtXejHgDlLr1es0suj06eP1-WUp7kBriaLgSVf37Ds"   # ⚠️ keep secret
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meWhhbW5ma3BndG51am1xZ2l2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTM4MzIyMiwiZXhwIjoyMDgwOTU5MjIyfQ.YLtXejHgDlLr1es0suj06eP1-WUp7kBriaLgSVf37Ds"  # ⚠️ DO NOT push to GitHub
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ---------------- ROOT ROUTE ----------------
-@app.route("/")
-def home():
-    # Redirect root URL to hospital login
-    return redirect("/hospital/login")
+# ---------------- API ROUTES (DROPDOWNS) ----------------
 
-# ---------------- HOSPITAL LOGIN ----------------
-@app.route("/hospital/login", methods=["GET", "POST"])
-def hospital_login():
+@app.route("/api/districts")
+def get_districts():
+    data = supabase.table("districts").select("id,name").execute().data
+    return jsonify(data)
+
+
+@app.route("/api/constituencies/<int:district_id>")
+def get_constituencies(district_id):
+    data = (
+        supabase.table("constituencies")
+        .select("id,name")
+        .eq("district_id", district_id)
+        .execute()
+        .data
+    )
+    return jsonify(data)
+
+
+@app.route("/api/places/<int:constituency_id>")
+def get_places(constituency_id):
+    data = (
+        supabase.table("places")
+        .select("id,name")
+        .eq("constituency_id", constituency_id)
+        .execute()
+        .data
+    )
+    return jsonify(data)
+
+# ---------------- REGISTER ----------------
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
     if request.method == "POST":
+
+        name = request.form.get("name")
         email = request.form.get("email")
         password = request.form.get("password")
+        phone = request.form.get("phone")
+        age = request.form.get("age")
+        blood_group = request.form.get("blood_group")
+        district = request.form.get("district")
+        constituency = request.form.get("constituency")
+        place = request.form.get("place")
 
-        hospital_data = (
-            supabase.table("hospitals")
+        # Validation
+        if not all([name, email, password, phone, age, blood_group, district, constituency, place]):
+            flash("❌ Not registered. Please fill all fields.", "error")
+            return redirect("/register")
+
+        # Check existing user
+        exists = (
+            supabase.table("users")
+            .select("id")
+            .eq("email", email)
+            .execute()
+            .data
+        )
+
+        if exists:
+            flash("❌ Email already registered", "error")
+            return redirect("/register")
+
+        try:
+            supabase.table("users").insert({
+                "id": str(uuid.uuid4()),
+                "name": name,
+                "email": email,
+                "password": generate_password_hash(password),
+                "phone": phone,
+                "age": int(age),
+                "blood_group": blood_group,
+                "district_id": int(district),
+                "constituency_id": int(constituency),
+                "place_id": int(place),
+            }).execute()
+
+            flash("✅ Registered successfully. Please login.", "success")
+            return redirect("/login")
+
+        except Exception as e:
+            print(e)
+            flash("❌ Registration failed. Try again.", "error")
+            return redirect("/register")
+
+    return render_template("register.html")
+
+
+# ---------------- LOGIN ----------------
+
+@app.route("/", methods=["GET", "POST"])
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form["email"]
+        password = request.form["password"]
+
+        user = (
+            supabase.table("users")
             .select("*")
             .eq("email", email)
             .execute()
             .data
         )
 
-        # Check hospital exists
-        if not hospital_data:
-            flash("❌ Invalid hospital credentials", "error")
-            return redirect("/hospital/login")
+        if not user:
+            flash("❌ Invalid email or password", "error")
+            return redirect("/login")
 
-        hospital = hospital_data[0]
+        user = user[0]
 
-        # ✅ PLAIN TEXT PASSWORD CHECK
-        if hospital["password"] != password:
-            flash("❌ Invalid hospital credentials", "error")
-            return redirect("/hospital/login")
+        if not check_password_hash(user["password"], password):
+            flash("❌ Invalid email or password", "error")
+            return redirect("/login")
 
-        # ✅ Store hospital session
-        session["hospital_id"] = hospital["id"]
-        session["hospital_name"] = hospital["hospital_name"]
-        session["hospital_district_id"] = hospital["district_id"]
-        session["hospital_constituency_id"] = hospital["constituency_id"]
-        session["hospital_place_id"] = hospital["place_id"]
+        # ✅ store session (UPDATED)
+        session["user_id"] = user["id"]
+        session["email"] = user["email"]
+        session["age"] = user["age"]
+        session["blood_group"] = user["blood_group"]
+        session["district_id"] = user["district_id"]
+        session["constituency_id"] = user["constituency_id"]
+        session["place_id"] = user["place_id"]
 
-        return redirect("/hospital/dashboard")
+        return redirect("/dashboard")
 
-    return render_template("hospital_login.html")
+    return render_template("login.html")
 
+@app.route("/dashboard")
+def dashboard():
+    if "user_id" not in session:
+        return redirect("/login")
 
-@app.route("/hospital/dashboard")
-def hospital_dashboard():
-    if "hospital_id" not in session:
-        return redirect("/hospital/login")
+    user_id = session["user_id"]
 
-    return render_template(
-        "hospital_dashboard.html",
-        hospital=session["hospital_name"]
-    )
-
-@app.route("/hospital/donors")
-def hospital_donors():
-    if "hospital_id" not in session:
-        return redirect("/hospital/login")
-
-    donors = (
+    # Fetch user details
+    user_data = (
         supabase.table("users")
-        .select("name,age,blood_group,phone")
-        .eq("place_id", session["hospital_place_id"])
+        .select("name,email,age,blood_group,district_id,constituency_id,place_id")
+        .eq("id", user_id)
         .execute()
         .data
     )
 
+    if not user_data:
+        return redirect("/login")
+
+    user = user_data[0]
+
+    # Fetch location names
+    district = supabase.table("districts") \
+        .select("name") \
+        .eq("id", user["district_id"]) \
+        .execute().data[0]["name"]
+
+    constituency = supabase.table("constituencies") \
+        .select("name") \
+        .eq("id", user["constituency_id"]) \
+        .execute().data[0]["name"]
+
+    place = supabase.table("places") \
+        .select("name") \
+        .eq("id", user["place_id"]) \
+        .execute().data[0]["name"]
+
     return render_template(
-        "hospital_donors.html",
-        donors=donors
+        "dashboard.html",
+        name=user["name"],
+        email=user["email"],
+        age=user["age"],
+        blood_group=user["blood_group"],
+        district=district,
+        constituency=constituency,
+        place=place
     )
-import smtplib
-from email.message import EmailMessage
+@app.route("/alerts")
+def user_alerts():
+    if "user_id" not in session:
+        return redirect("/login")
 
-EMAIL_ADDRESS = "d35001122@gmail.com"
-EMAIL_PASSWORD = "jizq ouay ttev iyeq"
+    user_id = session["user_id"]
 
-def send_email(to_email, subject, body):
-    msg = EmailMessage()
-    msg["Subject"] = subject
-    msg["From"] = EMAIL_ADDRESS
-    msg["To"] = to_email
-    msg.set_content(body)
+    user = (
+        supabase.table("users")
+        .select("place_id,blood_group")
+        .eq("id", user_id)
+        .execute()
+        .data
+    )[0]
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-        server.send_message(msg)
-
-@app.route("/hospital/request-blood", methods=["GET", "POST"])
-def hospital_request_blood():
-    if "hospital_id" not in session:
-        return redirect("/hospital/login")
-
-    if request.method == "POST":
-        patient_name = request.form.get("patient_name")
-        patient_age = request.form.get("patient_age")
-        blood_group = request.form.get("blood_group")
-        urgency_time = request.form.get("urgency_time")
-
-        if not all([patient_name, patient_age, blood_group, urgency_time]):
-            flash("❌ Fill all details", "error")
-            return redirect("/hospital/request-blood")
-
-        # 1️⃣ Insert request into database
-        request_data = {
-            "id": str(uuid.uuid4()),
-            "hospital_id": session["hospital_id"],
-            "patient_name": patient_name,
-            "patient_age": int(patient_age),
-            "blood_group": blood_group,
-            "urgency_time": urgency_time,
-            "place_id": session["hospital_place_id"]
-        }
-
-        supabase.table("blood_requests").insert(request_data).execute()
-
-        # 🔹 Fetch hospital contact number DIRECTLY from hospitals table
-        hospital_data = (
-            supabase.table("hospitals")
-            .select("hospital_name, contact_number")
-            .eq("id", session["hospital_id"])
-            .execute()
-            .data
-        )
-
-        hospital_name = hospital_data[0]["hospital_name"]
-        hospital_phone = hospital_data[0]["contact_number"]
-
-        # 2️⃣ Fetch donors in same place
-        donors = (
-            supabase.table("users")
-            .select("email")
-            .eq("place_id", session["hospital_place_id"])
-            .eq("blood_group", blood_group)
-            .execute()
-            .data
-        )
-
-        # 3️⃣ Send email to each donor
-        for donor in donors:
-            send_email(
-                donor["email"],
-                "🩸 Urgent Blood Requirement",
-                f"""
-Patient Name: {patient_name}
-Age: {patient_age}
-Blood Group Needed: {blood_group}
-Urgency: {urgency_time}
-
-Hospital: {hospital_name}
-📞 Contact: {hospital_phone}
-
-Please respond immediately if you can donate.
-"""
-            )
-
-        flash("✅ Blood request sent to all nearby donors", "success")
-        return redirect("/hospital/dashboard")
-
-    return render_template("hospital_request_blood.html")
-
-@app.route("/hospital/requests")
-def hospital_requests():
-    if "hospital_id" not in session:
-        return redirect("/hospital/login")
-
-    hospital_id = session["hospital_id"]
-
-    requests = (
+    alerts = (
         supabase.table("blood_requests")
         .select("*")
-        .eq("hospital_id", hospital_id)
+        .eq("place_id", user["place_id"])
+        .eq("blood_group", user["blood_group"])
         .execute()
         .data
     )
 
-    return render_template("hospital_requests.html", requests=requests)
-@app.route("/hospital/request/<request_id>/responses")
-def hospital_request_responses(request_id):
-    if "hospital_id" not in session:
-        return redirect("/hospital/login")
-
-    # Fetch responses with donor profiles
+    # Fetch user responses
     responses = (
         supabase.table("blood_request_responses")
-        .select(
-            "response, users(name, age, blood_group, phone)"
-        )
-        .eq("blood_request_id", request_id)
+        .select("blood_request_id,response")
+        .eq("user_id", user_id)
         .execute()
         .data
     )
 
+    # Convert to dictionary for easy lookup
+    response_map = {
+        r["blood_request_id"]: r["response"] for r in responses
+    }
+
     return render_template(
-        "hospital_request_responses.html",
-        responses=responses
+        "user_alerts.html",
+        alerts=alerts,
+        response_map=response_map
     )
 
 
+@app.route("/respond/<request_id>", methods=["POST"])
+def respond_to_request(request_id):
+    if "user_id" not in session:
+        return redirect("/login")
 
+    response = request.form.get("response")
+
+    if response not in ["YES", "NO"]:
+        return redirect("/alerts")
+
+    data = {
+        "id": str(uuid.uuid4()),
+        "blood_request_id": request_id,
+        "user_id": session["user_id"],
+        "response": response
+    }
+
+    supabase.table("blood_request_responses").insert(data).execute()
+
+    flash("✅ Response recorded", "success")
+    return redirect("/alerts")
+
+
+
+# ---------------- LOGOUT ----------------
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
 
 # ---------------- RUN ----------------
+
 if __name__ == "__main__":
     app.run(debug=True)
