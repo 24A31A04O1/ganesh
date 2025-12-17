@@ -1,0 +1,125 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Blood Request</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #ffebee, #fce4ec);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .card {
+      background: #ffffff;
+      width: 420px;
+      padding: 35px;
+      border-radius: 14px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+    }
+
+    h2 {
+      text-align: center;
+      color: #b71c1c;
+      margin-bottom: 25px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #b71c1c;
+      box-shadow: 0 0 4px rgba(183,28,28,0.3);
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #b71c1c;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #8e0000;
+    }
+
+    .note {
+      margin-top: 15px;
+      text-align: center;
+      font-size: 13px;
+      color: #555;
+    }
+
+    .back {
+      margin-top: 18px;
+      text-align: center;
+    }
+
+    .back a {
+      text-decoration: none;
+      color: #b71c1c;
+      font-weight: bold;
+    }
+
+    .back a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card">
+    <h2>🩸 Blood Request</h2>
+
+    <form method="POST">
+      <input type="text" name="patient_name" placeholder="Patient Name" required>
+      <input type="number" name="patient_age" placeholder="Patient Age" required>
+
+      <select name="blood_group" required>
+        <option value="">Select Blood Group</option>
+        <option>O+</option><option>O-</option>
+        <option>A+</option><option>A-</option>
+        <option>B+</option><option>B-</option>
+        <option>AB+</option><option>AB-</option>
+      </select>
+
+      <input type="text" name="urgency_time" placeholder="Urgency (e.g. Immediate / 2 Hours)" required>
+
+      <button type="submit">🚨 Send Blood Alert</button>
+    </form>
+
+    <div class="note">
+      Alerts will be sent to eligible donors in your locality
+    </div>
+
+    <div class="back">
+      <a href="/hospital/dashboard">⬅ Back to Dashboard</a>
+    </div>
+  </div>
+
+</body>
+</html>
