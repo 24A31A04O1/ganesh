@@ -1,1 +1,39 @@
 
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Blood Requests</title>
+  <style>
+    body { font-family: Arial; background: #f4f6f9; padding: 30px; }
+    .card {
+      background: white;
+      padding: 20px;
+      margin-bottom: 15px;
+      border-radius: 10px;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+    }
+    a { text-decoration: none; color: #1565c0; font-weight: bold; }
+  </style>
+</head>
+
+<body>
+
+<h2>🩸 My Blood Requests</h2>
+
+{% for r in requests %}
+  <div class="card">
+    <p><b>Patient:</b> {{ r.patient_name }} ({{ r.patient_age }})</p>
+    <p><b>Blood Group:</b> {{ r.blood_group }}</p>
+    <p><b>Urgency:</b> {{ r.urgency_time }}</p>
+
+    <a href="/hospital/request/{{ r.id }}/responses">
+      👥 View Donor Responses
+    </a>
+  </div>
+{% else %}
+  <p>No blood requests created yet.</p>
+{% endfor %}
+
+</body>
+</html>
+
