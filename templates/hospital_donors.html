@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Available Blood Donors</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 30px;
+      background: #f4f6f9;
+    }
+
+    h2 {
+      text-align: center;
+      color: #b71c1c;
+      margin-bottom: 20px;
+    }
+
+    .filter {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    select {
+      padding: 10px 14px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      min-width: 180px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: center;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background: #b71c1c;
+      color: white;
+      font-size: 14px;
+    }
+
+    tr:hover {
+      background: #f9f9f9;
+    }
+
+    .back {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .back a {
+      text-decoration: none;
+      color: #b71c1c;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>🩸 Available Blood Donors (Your Area)</h2>
+
+  <!-- 🔽 Blood Group Filter -->
+  <div class="filter">
+    <label for="bloodFilter"><b>Filter by Blood Group:</b></label>
+    <select id="bloodFilter" onchange="filterDonors()">
+      <option value="ALL">All</option>
+      <option>O+</option><option>O-</option>
+      <option>A+</option><option>A-</option>
+      <option>B+</option><option>B-</option>
+      <option>AB+</option><option>AB-</option>
+    </select>
+  </div>
+
+  <table id="donorTable">
+    <tr>
+      <th>Name</th>
+      <th>Age</th>
+      <th>Blood Group</th>
+      <th>Phone</th>
+    </tr>
+
+    {% for donor in donors %}
+    <tr data-blood="{{ donor.blood_group }}">
+      <td>{{ donor.name }}</td>
+      <td>{{ donor.age }}</td>
+      <td>{{ donor.blood_group }}</td>
+      <td>{{ donor.phone }}</td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="4">No donors found in your area</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <div class="back">
+    <a href="/hospital/dashboard">⬅ Back to Dashboard</a>
+  </div>
+
+<script>
+function filterDonors() {
+  const filter = document.getElementById("bloodFilter").value;
+  const rows = document.querySelectorAll("#donorTable tr[data-blood]");
+
+  rows.forEach(row => {
+    const blood = row.getAttribute("data-blood");
+    if (filter === "ALL" || blood === filter) {
+      row.style.display = "";
+    } else {
+      row.style.display = "none";
+    }
+  });
+}
+</script>
+
+</body>
+</html>
