@@ -1,0 +1,46 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Donor Responses</title>
+  <style>
+    body { font-family: Arial; background: #f4f6f9; padding: 30px; }
+    .card {
+      background: white;
+      padding: 18px;
+      margin-bottom: 12px;
+      border-radius: 10px;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+    }
+    .yes { color: #2e7d32; font-weight: bold; }
+    .no { color: #c62828; font-weight: bold; }
+  </style>
+</head>
+
+<body>
+
+<h2>👥 Donor Responses</h2>
+
+{% for r in responses %}
+  <div class="card">
+    <p><b>Name:</b> {{ r.users.name }}</p>
+    <p><b>Age:</b> {{ r.users.age }}</p>
+    <p><b>Blood Group:</b> {{ r.users.blood_group }}</p>
+    <p><b>Phone:</b> {{ r.users.phone }}</p>
+    <p>
+      <b>Status:</b>
+      {% if r.response == "YES" %}
+        <span class="yes">✅ Will Donate</span>
+      {% else %}
+        <span class="no">❌ Not Available</span>
+      {% endif %}
+    </p>
+  </div>
+{% else %}
+  <p>No responses yet.</p>
+{% endfor %}
+
+<a href="/hospital/dashboard">⬅ Back to Dashboard</a>
+
+</body>
+</html>
